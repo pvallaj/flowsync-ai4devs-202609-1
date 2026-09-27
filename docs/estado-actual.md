@@ -30,7 +30,10 @@ Migración: [`backend/database/migrations/1768620764696_create_access_tokens_tab
 Fichero: [`backend/app/models/user.ts`](../backend/app/models/user.ts)
 
 - Extiende el esquema generado y añade el login por email y password (`withAuthFinder`) y los access tokens (`DbAccessTokensProvider`).
-- Tiene un campo calculado `initials`: las iniciales del nombre, o del email si no hay nombre.
+- Tiene un campo calculado `initials`:
+  - Si `fullName` tiene dos o más palabras, toma la primera letra de las dos primeras.
+  - Si no hay nombre, toma la primera letra de la parte local del email y la primera del dominio.
+  - Si `fullName` tiene una sola palabra, usa sus dos primeras letras.
 - No tiene relaciones con otras tablas.
 
 ## Endpoints (`/api/v1`)
