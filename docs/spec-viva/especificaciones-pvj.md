@@ -40,8 +40,8 @@ El endpoint es público (no requiere autenticación). Recibe `fullName`, `email`
 
 ### Scenario: Contraseña fuera de rango
 
-- **WHEN** el `password` tiene menos de 8 o más de 32 caracteres
-- **THEN** la respuesta es un error 422 con la regla `minLength` o `maxLength` sobre el campo `password`
+- **WHEN** el `password` o el `passwordConfirmation` tienen menos de 8 o más de 32 caracteres
+- **THEN** la respuesta es un error 422 con la regla `minLength` o `maxLength` sobre el campo afectado (`passwordConfirmation` comparte las mismas reglas de longitud que `password`)
 
 ### Scenario: Confirmación de contraseña distinta
 
@@ -50,8 +50,13 @@ El endpoint es público (no requiere autenticación). Recibe `fullName`, `email`
 
 ### Scenario: Campo obligatorio ausente
 
-- **WHEN** falta en el cuerpo `email`, `password`, `passwordConfirmation` o la clave `fullName`
-- **THEN** la respuesta es un error 422 con la regla `required` sobre el campo ausente
+- **WHEN** falta en el cuerpo `email`, `password`, `passwordConfirmation` o la clave `fullName`, o `email`, `password` o `passwordConfirmation` llegan como `null` o como cadena vacía
+- **THEN** la respuesta es un error 422 con la regla `required` sobre ese campo (el bodyparser convierte las cadenas vacías en `null`, que se trata como valor ausente)
+
+### Scenario: Nombre vacío
+
+- **WHEN** se envía `fullName: ""` junto con el resto de campos válidos
+- **THEN** el bodyparser lo convierte en `null` y el usuario se crea con `fullName` nulo
 
 ### Requirement: Almacenamiento seguro de la contraseña
 
@@ -91,8 +96,13 @@ El endpoint es público. Recibe `email` y `password`, verifica las credenciales 
 
 ### Scenario: Campos ausentes en el login
 
-- **WHEN** falta `email` o `password` en el cuerpo
-- **THEN** la respuesta es un error 422 con la regla `required` sobre el campo ausente
+- **WHEN** falta `email` o `password` en el cuerpo, o llegan como `null` o como cadena vacía
+- **THEN** la respuesta es un error 422 con la regla `required` sobre ese campo
+
+### Scenario: Contraseña de cualquier longitud en el inicio de sesión
+
+- **WHEN** se envía una `password` no vacía de cualquier longitud
+- **THEN** el validador del login la acepta (no aplica límites de longitud) y la comprobación queda en manos de `User.verifyCredentials`
 
 ### Scenario: Varios inicios de sesión
 
@@ -129,18 +139,18 @@ Permitir que un usuario autenticado invalide el token con el que está haciendo 
 
 ### Requirements
 
-### Requirement: Logout mediante `POST /api/v1/account/logout`
+### Requirement: Cierre de sesión mediante `POST /api/v1/account/logout`
 
 El endpoint está protegido por el middleware `auth`. Elimina de la base de datos el token de acceso usado en la petición.
 
-### Scenario: Logout con token válido
+### Scenario: Cierre de sesión con token válido
 
 - **WHEN** se llama al endpoint con un token de acceso válido
 - **THEN** se borra ese token de `auth_access_tokens` y la respuesta es `{ message: 'Logged out successfully' }` (sin envoltorio `data`)
 
-### Scenario: Uso del token tras el logout
+### Scenario: Uso del token tras cerrar sesión
 
-- **WHEN** después del logout se usa el mismo token en una ruta protegida
+- **WHEN** después de cerrar sesión se usa el mismo token en una ruta protegida
 - **THEN** la respuesta es un error 401
 
 ### Scenario: Otros tokens del usuario
@@ -148,7 +158,7 @@ El endpoint está protegido por el middleware `auth`. Elimina de la base de dato
 - **WHEN** el usuario tiene otros tokens emitidos en inicios de sesión distintos y cierra sesión con uno de ellos
 - **THEN** solo se elimina el token usado en la petición; los demás siguen siendo válidos
 
-### Scenario: Logout sin autenticación
+### Scenario: Cierre de sesión sin autenticación
 
 - **WHEN** se llama al endpoint sin token o con un token inválido
 - **THEN** la respuesta es un error 401
@@ -182,6 +192,16 @@ Las rutas `profile` y `logout` del grupo `/api/v1/account` aplican el middleware
 ### Requirement: Tokens de acceso
 
 Los tokens se generan con `DbAccessTokensProvider` asociado al modelo `User`, se guardan con hash en `auth_access_tokens` y el valor en claro solo se devuelve en la respuesta de signup o login. No se configura caducidad para los tokens.
+
+### Scenario: Token emitido sin caducidad
+
+- **WHEN** se emite un token en signup o login
+- **THEN** su columna `expires_at` queda en `NULL` y el token sigue siendo válido hasta que se elimina
+
+### Scenario: Valor en claro del token
+
+- **WHEN** se emite un token
+- **THEN** su valor en claro se devuelve solo en esa respuesta de signup o login; en `auth_access_tokens` se guarda únicamente su hash
 
 ### Scenario: Borrado de un usuario
 
@@ -259,6 +279,37 @@ La ruta `GET /` está definida fuera del prefijo `/api/v1`.
 - **WHEN** se hace `GET /`
 - **THEN** la respuesta es `{ hello: 'world' }`
 
+### Requirement: Detalle de los errores según el entorno
+
+El manejador de excepciones activa el modo de depuración cuando la aplicación no corre en producción.
+
+### Scenario: Error fuera de producción
+
+- **WHEN** se produce un error y la aplicación no corre en producción
+- **THEN** la respuesta de error incluye información detallada de depuración
+
+---
+
+## Purpose: Cabeceras de seguridad
+
+Aplicar a las rutas registradas las protecciones de `@adonisjs/shield` configuradas en `config/shield.ts`.
+
+### Requirements
+
+### Requirement: Protecciones activas e inactivas
+
+Están activadas la protección contra framing (`X-Frame-Options: DENY`), HSTS con `maxAge` de 180 días y la protección contra sniffing de tipo de contenido. CSP y CSRF están desactivados.
+
+### Scenario: Respuesta de una ruta registrada
+
+- **WHEN** se responde a una petición sobre una ruta registrada
+- **THEN** la respuesta incluye las cabeceras `X-Frame-Options: DENY`, `Strict-Transport-Security` y `X-Content-Type-Options: nosniff`
+
+### Scenario: Petición sin token CSRF
+
+- **WHEN** se envía una petición `POST` sin token CSRF
+- **THEN** no se rechaza por CSRF, porque esa protección está desactivada
+
 ---
 
 ## Purpose: Política CORS
@@ -276,9 +327,9 @@ CORS está habilitado con métodos `GET`, `HEAD`, `POST`, `PUT`, `PATCH` y `DELE
 - **WHEN** la aplicación corre en modo desarrollo
 - **THEN** se acepta cualquier origen
 
-### Scenario: Entorno de producción
+### Scenario: Entorno distinto de desarrollo
 
-- **WHEN** la aplicación corre en producción
+- **WHEN** la aplicación no corre en modo desarrollo (por ejemplo, en producción o en test)
 - **THEN** la lista de orígenes permitidos está vacía y no se permite acceso cross-origin desde navegador
 
 ---
@@ -333,9 +384,9 @@ Cada petición se envía a `VITE_API_URL` (o `http://localhost:3333` si no está
 - **WHEN** `fetch` falla porque no se puede conectar con el servidor
 - **THEN** se lanza un `ApiError` con estado `0` y el mensaje «No se pudo conectar con el servidor. Comprueba que el backend está arrancado.»
 
-### Scenario: Respuesta no JSON
+### Scenario: Respuesta de error no JSON
 
-- **WHEN** el backend responde con un cuerpo que no es JSON
+- **WHEN** el backend responde con un código de error y un cuerpo que no es JSON
 - **THEN** el cuerpo se trata como `null` y el error se construye solo a partir del código de estado
 
 ### Requirement: Traducción de errores a `ApiError`
@@ -427,12 +478,12 @@ El contexto expone `user`, `token`, `status` (`loading`, `authenticated` o `anon
 
 Tras un `login` o `signup` correcto, el token se guarda en `localStorage` bajo `flowsync.token` y la sesión pasa a `authenticated`.
 
-### Scenario: Login o registro correcto
+### Scenario: Inicio de sesión o registro correcto
 
 - **WHEN** `api.login` o `api.signup` devuelven `{ user, token }`
 - **THEN** se guarda el token en `localStorage`, se actualizan `user` y `token`, `status` pasa a `authenticated` y `sessionError` se limpia
 
-### Scenario: Login o registro fallido
+### Scenario: Inicio de sesión o registro fallido
 
 - **WHEN** `api.login` o `api.signup` lanzan un error
 - **THEN** la sesión no cambia y el error se propaga al formulario que hizo la llamada
@@ -575,7 +626,7 @@ Permitir crear una cuenta desde `/register`.
 
 ### Requirement: Formulario de registro
 
-La pantalla, con el título «Crea tu cuenta» dentro del marco «FlowSync», muestra los campos «Nombre completo (opcional)», «Email», «Contraseña» (con la ayuda «Entre 8 y 32 caracteres.») y «Repite la contraseña», un botón «Crear cuenta» y un enlace «Inicia sesión» a `/login`. El formulario desactiva la validación nativa del navegador (`noValidate`).
+La pantalla, con el título «Crea tu cuenta» y la descripción «Regístrate para empezar a organizar el trabajo del equipo.» dentro del marco «FlowSync», muestra los campos «Nombre completo (opcional)», «Email», «Contraseña» (con la ayuda «Entre 8 y 32 caracteres.») y «Repite la contraseña», un botón «Crear cuenta» y el texto «¿Ya tienes cuenta?» con un enlace «Inicia sesión» a `/login`. El formulario desactiva la validación nativa del navegador (`noValidate`).
 
 ### Scenario: Contraseñas distintas en cliente
 
@@ -607,14 +658,14 @@ Permitir entrar con una cuenta existente desde `/login`.
 
 ### Requirement: Formulario de inicio de sesión
 
-La pantalla, con el título «Inicia sesión» dentro del marco «FlowSync», muestra los campos «Email» y «Contraseña», un botón «Entrar» y un enlace «Crea una» a `/register`. El formulario desactiva la validación nativa del navegador (`noValidate`).
+La pantalla, con el título «Inicia sesión» y la descripción «Entra con tu cuenta para volver a tus tareas.» dentro del marco «FlowSync», muestra los campos «Email» y «Contraseña», un botón «Entrar» y el texto «¿Aún no tienes cuenta?» con un enlace «Crea una» a `/register`. El formulario desactiva la validación nativa del navegador (`noValidate`).
 
-### Scenario: Envío del login
+### Scenario: Envío del inicio de sesión
 
 - **WHEN** se envía el formulario
 - **THEN** se llama a `login` con el email y la contraseña, y el botón muestra «Entrando…» desactivado mientras dura la petición
 
-### Scenario: Login correcto
+### Scenario: Inicio de sesión correcto
 
 - **WHEN** el backend acepta las credenciales
 - **THEN** se inicia la sesión y la ruta solo pública redirige a `/profile`
@@ -626,8 +677,13 @@ La pantalla, con el título «Inicia sesión» dentro del marco «FlowSync», mu
 
 ### Scenario: Sesión anterior perdida
 
-- **WHEN** se llega al login con un `sessionError` (token rechazado o backend inaccesible durante la rehidratación) y no hay error del intento actual
-- **THEN** se muestra el `sessionError` como aviso; si hay un error del intento actual, se muestra ese en su lugar
+- **WHEN** se llega a la pantalla de inicio de sesión con un `sessionError` (token rechazado o backend inaccesible durante la rehidratación)
+- **THEN** se muestra el `sessionError` como aviso siempre que no haya aviso general (`formError`) del intento actual; si lo hay, se muestra el `formError` en su lugar
+
+### Scenario: Persistencia del aviso de sesión perdida
+
+- **WHEN** un intento de inicio de sesión falla
+- **THEN** el `sessionError` no se limpia (solo se limpia al iniciar sesión correctamente o al cerrar sesión), así que vuelve a mostrarse mientras el intento no genere un aviso general
 
 ---
 
