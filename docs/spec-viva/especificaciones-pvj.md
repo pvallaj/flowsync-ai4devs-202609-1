@@ -1,3 +1,4 @@
+# PARTE A
 # Especificaciones de FlowSync
 
 Este documento describe el comportamiento **actual** de FlowSync tal y como está implementado en el código (`backend/` y `frontend/`). No recoge funcionalidades planificadas ni mejoras: solo lo que el sistema hace hoy.
@@ -713,3 +714,17 @@ La pantalla muestra un círculo con las `initials` del usuario, su `fullName` (o
 
 - **WHEN** se pulsa el botón «Cerrar sesión»
 - **THEN** el botón pasa a «Cerrando sesión…» desactivado, se ejecuta `logout` y, al quedar la sesión `anonymous`, la ruta protegida redirige a `/login`
+
+
+# PARTE B
+## Lista 1
+- El agente escribio 10 requisitos: 10 para el back y 9 para el front.
+- Yo vi solo 3.
+
+## Lista 2
+- No encontré 
+
+## Lista 3
+- Navegación y protección de rutas
+- Persistencia de datos
+- Política CORS
