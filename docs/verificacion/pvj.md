@@ -2,7 +2,7 @@
 
 Cada fila es un escenario (`#### Scenario`) de las specs vivas de OpenSpec, con el test automatizado que lo verifica y un veredicto de cobertura.
 
-- **Fuente de los escenarios:** [openspec/specs/auth/spec.md](../../openspec/specs/auth/spec.md) y [openspec/specs/tasks/spec.md](../../openspec/specs/tasks/spec.md). Los cambios de `openspec/changes/archive/` (`add-task-list`, `add-task-due-date` y `add-task-status-filter`) ya están consolidados en esas specs. Se ha comprobado que no tienen ningún escenario que falte en ellas.
+- **Fuente de los escenarios:** [openspec/specs/auth/spec.md](../../openspec/specs/auth/spec.md) y [openspec/specs/tasks/spec.md](../../openspec/specs/tasks/spec.md). Los cambios de `openspec/changes/archive/` (`add-task-list`, `add-task-due-date` y `add-task-status-filter`) ya están consolidados en esas specs. Se ha comprobado, por título, que no tienen ningún escenario que falte en ellas.
 - **Fuente de los tests:** todo lo que hay en el repo, es decir, [backend/tests/functional/auth/](../../backend/tests/functional/auth/) (4 ficheros, 20 tests). No hay `backend/tests/unit/`, ni tests de `tasks`, ni runner de tests en `frontend/`.
 - **Ejecución:** `node ace test` sobre el commit `77544fb` (11/10/2026) da **20 de 20 en verde**. Ningún escenario figura como cubierto por un test que falle.
 
@@ -11,7 +11,7 @@ Cada fila es un escenario (`#### Scenario`) de las specs vivas de OpenSpec, con 
 | Estado | Significa |
 |---|---|
 | ✅ Cubierto | Un test automatizado que pasa comprueba **todas** las cláusulas del THEN del escenario. |
-| ❌ No está cubierto | No hay ningún test, o el que hay solo comprueba una parte del THEN. En ese caso se marca como *Parcial* y la última columna dice qué falta comprobar. |
+| ❌ No está cubierto | No hay ningún test, o el que hay solo comprueba una parte del THEN. En este segundo caso se marca como *Parcial* y la última columna dice qué falta comprobar. |
 | ❓ No lo sé | Hay un test relacionado, pero con lo que dice la spec no se puede decidir si basta. La última columna explica qué falta para decidir. |
 
 La columna **Capa** distingue los requisitos del sistema (`El sistema SHALL…`, que se verifican contra la API) de los de la interfaz (`La interfaz SHALL…`, que se verifican en el frontend).
@@ -20,7 +20,7 @@ La columna **Capa** distingue los requisitos del sistema (`El sistema SHALL…`,
 
 | Capability | Capa | Escenarios | ✅ Cubierto | ❌ No está cubierto | ❓ No lo sé |
 |---|---|---:|---:|---:|---:|
-| `auth` | API | 22 | 12 | 9 (todos parciales) | 1 |
+| `auth` | API | 22 | 12 | 9 (8 parciales y 1 sin test) | 1 |
 | `auth` | UI | 23 | 0 | 23 | 0 |
 | `tasks` | API | 68 | 0 | 68 | 0 |
 | `tasks` | UI | 56 | 0 | 56 | 0 |
@@ -56,9 +56,9 @@ Lo que sale del análisis:
 | A17 | Protección de los recursos de cuenta | El registro y el login son públicos | API | [session.spec.ts:87](../../backend/tests/functional/auth/session.spec.ts#L87) «el registro y el login siguen siendo públicos» (signup) + [login.spec.ts:21](../../backend/tests/functional/auth/login.spec.ts#L21) «con las credenciales correctas se emite un token que autentica» (login, sin cabecera) | ✅ Cubierto |  |
 | A18 | Forma de las respuestas de la API | JSON aunque el cliente pida HTML | API | — | ❌ No está cubierto | Ningún test envía `Accept: text/html`. |
 | A19 | Forma de las respuestas de la API | La contraseña nunca sale | API | [signup.spec.ts:55](../../backend/tests/functional/auth/signup.spec.ts#L55) «la contraseña nunca sale en la respuesta» | ❌ No está cubierto | Parcial: solo se comprueba en el registro. El escenario también exige el login y la consulta del perfil. |
-| A20 | Iniciales de la cuenta | Nombre de dos palabras | API | [initials.spec.ts:15](../../backend/tests/functional/auth/initials.spec.ts#L15) «un nombre de dos palabras da la inicial de cada una» | ✅ Cubierto |  |
-| A21 | Iniciales de la cuenta | Nombre de una sola palabra | API | [initials.spec.ts:20](../../backend/tests/functional/auth/initials.spec.ts#L20) «un nombre de una palabra da sus dos primeras letras» | ✅ Cubierto |  |
-| A22 | Iniciales de la cuenta | Cuenta sin nombre | API | [initials.spec.ts:21](../../backend/tests/functional/auth/initials.spec.ts#L21) «sin nombre, las iniciales salen del email» | ✅ Cubierto |  |
+| A20 | Iniciales de la cuenta | Nombre de dos palabras | API | [initials.spec.ts:25](../../backend/tests/functional/auth/initials.spec.ts#L25) «un nombre de dos palabras da la inicial de cada una» (caso de la tabla `casos`, línea 15) | ✅ Cubierto |  |
+| A21 | Iniciales de la cuenta | Nombre de una sola palabra | API | [initials.spec.ts:25](../../backend/tests/functional/auth/initials.spec.ts#L25) «un nombre de una palabra da sus dos primeras letras» (caso de la tabla `casos`, línea 20) | ✅ Cubierto |  |
+| A22 | Iniciales de la cuenta | Cuenta sin nombre | API | [initials.spec.ts:25](../../backend/tests/functional/auth/initials.spec.ts#L25) «sin nombre, las iniciales salen del email» (caso de la tabla `casos`, línea 21) | ✅ Cubierto |  |
 | A23 | Pantalla de registro | Alta correcta | UI | — | ❌ No está cubierto | El frontend no tiene runner de tests (ni unitarios ni e2e). |
 | A24 | Pantalla de registro | Las contraseñas no coinciden | UI | — | ❌ No está cubierto | El frontend no tiene runner de tests (ni unitarios ni e2e). |
 | A25 | Pantalla de registro | Nombre vacío | UI | — | ❌ No está cubierto | El frontend no tiene runner de tests (ni unitarios ni e2e). |
